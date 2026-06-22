@@ -1,4 +1,4 @@
-"""Unit tests for app/auth.py — GoTrue calls are mocked, no network."""
+"""Unit tests for app/auth.py. GoTrue calls are mocked, no network."""
 
 import pytest
 from fastapi import Depends, FastAPI

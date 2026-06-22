@@ -1,10 +1,7 @@
-"""ETL property tests (Phase 1) — run against the loaded Supabase database.
+"""ETL property tests, run against the loaded Supabase database.
 
-Covers the published scenarios in tests/ETL_TEST_SCENARIOS.md:
-  1. Lookup row counts
-  2. Fact-table grain uniqueness
-  3. Manifest <-> DB reconciliation
-  4. (bonus) multi-night stay-row expansion
+Checks lookup row counts, fact-table grain uniqueness, manifest/DB
+reconciliation, and multi-night stay-row expansion.
 """
 
 import hashlib
@@ -17,7 +14,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def test_lookup_row_counts():
-    """Scenario 1: lookup tables load to their expected fixed row counts."""
+    """Lookup tables load to their expected fixed row counts."""
     counts = {r["t"]: r["n"] for r in query(
         "select 'room' t, count(*) n from room_type_lookup "
         "union all select 'rate', count(*) from rate_plan_lookup "
@@ -29,7 +26,7 @@ def test_lookup_row_counts():
 
 
 def test_no_duplicate_grain():
-    """Scenario 2: one row per (reservation_id, stay_date) — no duplicate grain."""
+    """One row per (reservation_id, stay_date): no duplicate grain."""
     dupes = query(
         "select reservation_id, stay_date from reservations_hackathon "
         "group by 1, 2 having count(*) > 1"
@@ -38,7 +35,7 @@ def test_no_duplicate_grain():
 
 
 def test_manifest_reconciles_with_db():
-    """Scenario 3: manifest id count + sha256 reconcile with the loaded DB."""
+    """Manifest id count + sha256 reconcile with the loaded DB."""
     manifest = json.loads((ROOT / "etl/SCRAPE_MANIFEST.json").read_text())
     db_ids = [
         r["reservation_id"]
@@ -50,7 +47,7 @@ def test_manifest_reconciles_with_db():
 
 
 def test_multi_night_expands_to_nights():
-    """Scenario 4 (bonus): a multi-night reservation produces one stay row per night."""
+    """A multi-night reservation produces one stay row per night."""
     rows = query(
         "select reservation_id, nights, count(*) as stay_rows "
         "from reservations_hackathon group by reservation_id, nights "

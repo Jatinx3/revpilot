@@ -1,7 +1,7 @@
-"""Deep-agent wiring tests (Phase 3) — graph introspection / config, no LLM calls.
+"""Deep-agent wiring tests: graph introspection and config, no LLM calls.
 
-Covers tests/AGENT_TEST_SCENARIOS.md: fixed 5-tool surface, HITL on get_as_of_otb,
-isolated segment subagent, on-demand skills, and configured memory.
+Checks the fixed 5-tool surface, the HITL gate on get_as_of_otb, the isolated
+segment subagent, on-demand skills, and configured memory.
 """
 
 import json
@@ -31,7 +31,7 @@ def _node_names(agent):
     return set(agent.get_graph().nodes)
 
 
-# Scenario 1 — tool surface is fixed (exactly five, no run_sql)
+# the tool surface is exactly five tools, no run_sql
 def test_tool_surface_is_exactly_five():
     names = {t.__name__ for t in TOOLS}
     assert names == EXPECTED_TOOLS
@@ -39,21 +39,21 @@ def test_tool_surface_is_exactly_five():
     assert not any("sql" in n for n in names)
 
 
-# Scenario 2 — get_as_of_otb is human-gated (HITL)
+# get_as_of_otb is human-gated (HITL)
 def test_get_as_of_otb_is_hitl(agent):
     assert INTERRUPT_ON.get("get_as_of_otb") is True
     nodes = _node_names(agent)
     assert any("HumanInTheLoop" in n for n in nodes), "no HITL middleware in graph"
 
 
-# Scenario 3 — segment work is isolated in a subagent (pattern: task-tool subagent)
+# segment work is isolated in its own subagent
 def test_segment_work_isolated_in_subagent():
     sub_tools = {t.__name__ for t in SEGMENT_SUBAGENT["tools"]}
     assert sub_tools == {"get_segment_mix", "get_block_vs_transient_mix"}
     assert SEGMENT_SUBAGENT["name"] == "segment-analyst"
 
 
-# Scenario 5 — skills are filesystem-backed and loaded on demand (not a monolith)
+# skills are filesystem-backed and loaded on demand, not one big prompt
 def test_skills_on_demand(agent):
     assert SKILL_SOURCES == ["skills"]
     assert any("Skills" in n for n in _node_names(agent)), "no SkillsMiddleware in graph"
@@ -61,13 +61,13 @@ def test_skills_on_demand(agent):
     assert len(skill_files) >= 6  # progressive disclosure, not one giant prompt
 
 
-# Scenario 6 — memory / filesystem configured (multi-turn, not stateless)
+# memory is configured, so the agent is multi-turn, not stateless
 def test_memory_configured(agent):
     assert agent.checkpointer is not None
     assert agent.store is not None
 
 
-# Scenario 4 — multi-tool decomposition (planning middleware + recorded trace)
+# multi-tool decomposition: planning middleware is wired into the graph
 def test_planning_and_full_toolset(agent):
     nodes = _node_names(agent)
     assert any("TodoList" in n or "Planning" in n for n in nodes), "no planning middleware"
@@ -75,15 +75,15 @@ def test_planning_and_full_toolset(agent):
 
 
 def test_multitool_decomposition_trace():
-    # Recorded trace from a real composite question ("what's driving August 2026,
-    # and how have we booked in the last 7 days?"). A LangGraph/LLM call is not
-    # required in CI — we assert the recorded plan invoked >=2 distinct required tools.
+    # Uses a recorded trace from a real composite question ("what's driving August
+    # 2026, and how have we booked in the last 7 days?") so this needs no live LLM
+    # call. Assert the plan invoked at least 2 distinct required tools.
     trace = json.loads((ROOT / "tests/fixtures/multitool_trace.json").read_text())
     domain_tools = {e["name"] for e in trace if e["type"] == "tool"} & EXPECTED_TOOLS
     assert len(domain_tools) >= 2, f"expected >=2 distinct required tools, got {domain_tools}"
 
 
-# Scenario 7 (bonus) — refusal/guardrail policy is encoded in a skill the agent loads
+# the refusal/guardrail policy lives in a skill the agent can load
 def test_guardrail_skill_encodes_refusal_policy():
     txt = (ROOT / "skills/data-guardrails/SKILL.md").read_text().lower()
     assert "cancelled" in txt and "provisional" in txt

@@ -1,8 +1,8 @@
-"""Skill-pack structural tests (Phase 3) — no LLM calls.
+"""Skill-pack structural tests (no LLM calls).
 
-Covers tests/SKILL_TEST_SCENARIOS.md: pack version pin, minimum count, judgment
-skills (threshold + action), tool routing, distinctness, adversarial guardrail,
-and the OTA/block concentration bonus.
+Checks the pack version pin, minimum skill count, judgment skills (threshold +
+action), tool routing, distinctness, the adversarial guardrail, and the
+OTA/block concentration skills.
 """
 
 import pathlib
@@ -37,13 +37,13 @@ def _field(frontmatter, key):
     return m.group(1).strip() if m else None
 
 
-# Scenario 1 — pack version pin
+# pack version pin
 def test_pack_version_pin():
     fm, _ = _split(SKILLS / "CHALLENGE_SKILL.md")
     assert "otel-rm-v2" in fm
 
 
-# Scenario 2 — minimum skill count
+# minimum skill count, and every skill has a name + description
 def test_min_skill_count():
     skill_md = list(SKILLS.glob("**/SKILL.md"))
     assert len(skill_md) >= 6
@@ -52,7 +52,7 @@ def test_min_skill_count():
         assert _field(fm, "name") and _field(fm, "description")
 
 
-# Scenario 3 — judgment skills (threshold + action, >=80 words)
+# judgment skills carry a threshold + a recommended action, >=80 words
 def test_judgment_skills():
     threshold = re.compile(r"(\d+%|0\.\d+|ADR\s+\w+\s+\d+)")
     action = re.compile(r"(recommend|shift|close|hold|review|protect|tighten|raise)", re.I)
@@ -64,7 +64,7 @@ def test_judgment_skills():
     assert judged >= 3, f"only {judged} judgment skills found"
 
 
-# Scenario 4 — tool routing declared, no raw SQL
+# each skill names a required tool and never references raw SQL
 def test_each_skill_names_a_tool_and_no_raw_sql():
     for p in _skill_files():
         text = p.read_text(encoding="utf-8")
@@ -73,7 +73,7 @@ def test_each_skill_names_a_tool_and_no_raw_sql():
         assert "run_sql" not in text, f"{p} references run_sql"
 
 
-# Scenario 5 — distinct routing + coverage
+# names and descriptions are distinct, and the core skills are present
 def test_distinct_and_coverage():
     names, descs = set(), set()
     for p in _skill_files():
@@ -87,11 +87,11 @@ def test_distinct_and_coverage():
     assert {"pickup-pace", "segment-mix", "otb-summary"} <= names
 
 
-# Scenario 6 — adversarial guardrail present
+# a guardrail skill warns against a real analysis trap
 def test_adversarial_guardrail():
-    # Published S6 wants a skill that explicitly cautions against a known pitfall:
-    # conflating stay rows with reservations, OR misusing property_date for monthly
-    # analysis. Check the guardrail *content*, not an incidental word like "cancelled".
+    # The guardrail skill should caution against a genuine pitfall: conflating stay
+    # rows with reservations, or using property_date for monthly analysis. Match on
+    # the actual content, not an incidental word like "cancelled".
     bodies = [_split(p)[1].lower() for p in _skill_files()]
     rows_vs_reservations = any(
         "row" in b and "reservation" in b and ("are not" in b or "not reservation" in b
@@ -107,7 +107,7 @@ def test_adversarial_guardrail():
     )
 
 
-# Scenario 7 — OTA / block concentration judgment (bonus)
+# OTA and block-concentration skills reference the share metrics they judge on
 def test_concentration_skill_references_share():
     blob = " ".join(p.read_text(encoding="utf-8") for p in _skill_files())
     assert "share_of_revenue" in blob

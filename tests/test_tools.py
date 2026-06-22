@@ -1,10 +1,9 @@
-"""Tool-layer property tests (Phase 2) — run against the loaded Supabase DB.
+"""Tool-layer property tests, run against the loaded Supabase DB.
 
-Covers tests/TOOL_TEST_SCENARIOS.md scenarios 1-6, 8-12. The dataset carries
-last-year (2025) actuals plus forward-looking 2026 business, so the published
-2025 months exist. Provisional rows only appear in 2026 months; the dataset
-regenerates daily from a moving anchor, so scenario 8 discovers a month that
-currently holds provisional rows rather than hardcoding one.
+The dataset carries last-year (2025) actuals plus forward-looking 2026 business,
+so the 2025 months exist. Provisional rows only appear in 2026 months, and the
+dataset regenerates daily from a moving anchor, so the provisional tests discover
+a month that currently holds provisional rows rather than hardcoding one.
 """
 
 import inspect
@@ -23,7 +22,7 @@ TOOL_NAMES = [
 ]
 
 
-# Scenario 1 — grain inequality
+# grain inequality: rows, reservations, and room nights are different counts
 def test_grain_inequality():
     r = get_otb_summary("2025-07", exclude_cancelled=True)
     assert r["reservation_count"] < r["row_count"]
@@ -31,7 +30,7 @@ def test_grain_inequality():
     assert r["room_revenue"] <= r["total_revenue"]
 
 
-# Scenario 2 — cancellation filter changes counts
+# excluding cancelled changes the counts
 def test_cancellation_filter_changes_counts():
     inc = get_otb_summary("2025-08", exclude_cancelled=False)
     exc = get_otb_summary("2025-08", exclude_cancelled=True)
@@ -39,7 +38,7 @@ def test_cancellation_filter_changes_counts():
     assert exc["reservation_count"] <= inc["reservation_count"]
 
 
-# Scenario 3 — segment shares sum to one
+# segment shares sum to one
 def test_segment_shares_sum_to_one():
     r = get_segment_mix("2025-07")
     assert abs(sum(s["share_of_room_nights"] for s in r["segments"]) - 1.0) < 1e-6
@@ -47,7 +46,7 @@ def test_segment_shares_sum_to_one():
     assert all(0 <= s["share_of_revenue"] <= 1 for s in r["segments"])
 
 
-# Scenario 4 — macro group filter narrows universe
+# macro_group filter narrows the universe to that group
 def test_macro_filter_narrows():
     full = get_segment_mix("2025-07")
     retail = get_segment_mix("2025-07", macro_group="Retail")
@@ -58,7 +57,7 @@ def test_macro_filter_narrows():
     assert all(s["macro_group"] == "Retail" for s in retail["segments"])
 
 
-# Scenario 5 — pickup uses booking date, not stay date
+# pickup keys off the booking date (create_datetime), not stay_date
 def test_pickup_uses_booking_window():
     wide = get_pickup_delta(booking_window_days=3650, future_stay_from="2025-01-01")
     narrow = get_pickup_delta(booking_window_days=1, future_stay_from="2025-01-01")
@@ -69,15 +68,15 @@ def test_pickup_uses_booking_window():
     assert far["new_room_nights"] == 0
 
 
-# Scenario 6 — OTA concentration signal
+# OTA segment shows up with a sane revenue share
 def test_ota_present():
     r = get_segment_mix("2025-08")
     ota = [s for s in r["segments"] if s["market_code"] == "OTA"]
-    assert ota, "OTA segment missing — broken ETL or wrong month"
+    assert ota, "OTA segment missing (broken ETL or wrong month)"
     assert 0 < ota[0]["share_of_revenue"] < 1
 
 
-# Scenario 8 — provisional excluded from default OTB
+# provisional rows are excluded from default OTB
 def test_provisional_excluded_by_default():
     # Dataset regenerates daily, so discover a non-cancelled month that currently
     # holds provisional rows rather than hardcoding one.
@@ -86,7 +85,7 @@ def test_provisional_excluded_by_default():
         "where financial_status = 'Provisional' and reservation_status <> 'Cancelled' "
         "order by 1 limit 1"
     )
-    assert months, "no non-cancelled provisional rows in dataset — broken ETL"
+    assert months, "no non-cancelled provisional rows in dataset (broken ETL)"
     month = months[0]["m"]
     default = get_otb_summary(month, exclude_cancelled=True)
     raw_non_cancelled = query(
@@ -99,14 +98,14 @@ def test_provisional_excluded_by_default():
     assert proof["aggregates"]["provisional_row_count"] > 0
 
 
-# Scenario 8b — provisional included only when explicitly requested
+# provisional is included only when explicitly requested
 def test_provisional_included_when_requested():
     months = query(
         "select to_char(stay_date,'YYYY-MM') m from reservations_hackathon "
         "where financial_status = 'Provisional' and reservation_status <> 'Cancelled' "
         "order by 1 limit 1"
     )
-    assert months, "no non-cancelled provisional rows in dataset — broken ETL"
+    assert months, "no non-cancelled provisional rows in dataset (broken ETL)"
     month = months[0]["m"]
     default = get_otb_summary(month)
     incl = get_otb_summary(month, include_provisional=True)
@@ -122,7 +121,7 @@ def test_provisional_included_when_requested():
     assert incl["include_provisional"] is True and default["include_provisional"] is False
 
 
-# Scenario 9 — as-of snapshot differs from current OTB
+# point-in-time as-of snapshot vs current OTB
 def test_as_of_snapshot():
     far = get_as_of_otb("2025-08", as_of_utc="2027-01-01T00:00:00Z")
     early = get_as_of_otb("2025-08", as_of_utc="2024-01-01T00:00:00Z")
@@ -134,7 +133,7 @@ def test_as_of_snapshot():
     assert early["row_count"] <= far["row_count"]
 
 
-# Scenario 10 — property date vs stay date
+# property_date vs stay_date mismatch count matches the load proof
 def test_property_date_mismatch_matches_proof():
     proof = json.loads((ROOT / "etl/LOAD_PROOF.json").read_text())
     db = query(
@@ -143,7 +142,7 @@ def test_property_date_mismatch_matches_proof():
     assert db == proof["aggregates"]["property_date_mismatch_count"]
 
 
-# Scenario 11 — block vs transient mix
+# block vs transient mix reconciles and stays within bounds
 def test_block_reconciles_and_bounds():
     b = get_block_vs_transient_mix("2025-09")
     otb = get_otb_summary("2025-09", exclude_cancelled=True)
@@ -154,7 +153,7 @@ def test_block_reconciles_and_bounds():
     assert len(b["top_companies"]) <= 3
 
 
-# Room-type ADR breakdown — "which room type has the highest ADR"
+# room-type ADR breakdown (the "which room type has the highest ADR" question)
 def test_room_type_adr_breakdown():
     default = get_otb_summary("2025-08")
     assert "room_types" not in default  # off by default, shape unchanged
@@ -171,7 +170,7 @@ def test_room_type_adr_breakdown():
     assert abs(sum(x["room_revenue"] for x in rt) - r["room_revenue"]) < 1e-6
 
 
-# Scenario 12 — tool layer isolation
+# tools expose no raw-SQL parameter and document their grain
 def test_tool_isolation_no_raw_sql_and_grain_documented():
     for name in TOOL_NAMES:
         fn = getattr(T, name)
@@ -181,7 +180,7 @@ def test_tool_isolation_no_raw_sql_and_grain_documented():
         assert any(w in doc for w in ("grain", "room night", "reservation", "stay row")), name
 
 
-# Scenario 12 (cont.) — tools read only the semantic views, never the raw fact table
+# tools read only the semantic views, never the raw fact table
 def test_tools_never_query_raw_fact_table():
     src = (ROOT / "tools/rm_tools.py").read_text().lower()
     # the raw table may only appear in prose (docstring/comment), never in a FROM/JOIN
