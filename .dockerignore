@@ -1,0 +1,14 @@
+.venv/
+.pw-browsers/
+.git/
+.gitignore
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+.env
+docs/
+tests/
+etl/
+scripts/
+.DS_Store

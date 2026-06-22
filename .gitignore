@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+node_modules/
+.DS_Store
+.pw-browsers/
+# local-only: AI design specs/plans and editor tooling — not part of the submission
+docs/
+.claude/

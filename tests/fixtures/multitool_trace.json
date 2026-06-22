@@ -1,0 +1,22 @@
+[
+  {
+    "type": "skill",
+    "name": "segment-mix"
+  },
+  {
+    "type": "tool",
+    "name": "task"
+  },
+  {
+    "type": "skill",
+    "name": "pickup-pace"
+  },
+  {
+    "type": "tool",
+    "name": "get_pickup_delta"
+  },
+  {
+    "type": "tool",
+    "name": "get_otb_summary"
+  }
+]
