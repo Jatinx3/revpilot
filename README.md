@@ -85,7 +85,7 @@ cp .env.example .env                 # then fill in the values
 | Key | Purpose |
 |---|---|
 | `DATABASE_URL` | Supabase Postgres (session-pooler URI) |
-| `MODEL_ID` | dev: `openrouter:google/gemini-2.5-flash`; deployed: `openrouter:google/gemini-2.5-pro` (also `google_genai:`, `openai:`) |
+| `MODEL_ID` | `openrouter:google/gemini-2.5-flash` (also `google_genai:`, `openai:`) |
 | `OPENROUTER_API_KEY` | model gateway key |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Supabase project API URL + anon key (Project Settings → API); used for sign-in |
 
@@ -117,21 +117,6 @@ PYTHONPATH=. uvicorn app.main:app --port 8077
 `GET /health` returns the live DB fingerprint (`db_fingerprint`, `dataset_revision`,
 `row_hash`, `financial_status_posted_only_rows`) for reconciliation against
 `etl/LOAD_PROOF.json`.
-
-## Auth
-
-Sign-in is handled by **Supabase Auth — username + password, invite-only**. Supabase
-keys accounts by email, so the UI maps a username to a fixed domain
-(`gm` → `gm@revpilot.com`); users only ever see a username. The backend verifies each
-request's access token against Supabase GoTrue — **no JWT secret is stored** — and
-namespaces each conversation under the signed-in user.
-
-One-time provisioning in the Supabase dashboard:
-
-1. **Authentication → Users → Add user**: create the account with email
-   `<username>@revpilot.com` and a password (dashboard-created users are auto-confirmed).
-2. **Authentication → Sign In / Providers → Email**: disable new user signups.
-3. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` (Project Settings → API) in `.env`.
 
 ## Testing
 
@@ -165,18 +150,10 @@ scripts/    apply_sql.py · compute_load_fingerprint.py
 
 ## Design decisions & notes
 
-- **Deploy topology:** hosted Postgres (Supabase) + the FastAPI container on an
-  always-on host; the model is served via OpenRouter (key set in the deployment env,
-  never committed).
-- **Model split:** dev runs `gemini-2.5-flash` (cheap, fast iteration); the deployed
-  build sets `MODEL_ID=openrouter:google/gemini-2.5-pro` for the live review — stronger
-  reasoning and instruction-following on multi-part and adversarial questions. Nothing
-  else changes; it's a single env var.
 - **Data-quality decision:** source bookings carry granular rate codes beyond the
   8-row `rate_plan_lookup`, so the brief's `rate_plan_code` FK is intentionally relaxed
   (`sql/relax_fk.sql`); the other dimensions are verified clean by the ETL's
   `integrity_report`. See [etl/SITE_NOTES.md](etl/SITE_NOTES.md).
 - **Out of scope (deliberate):** a daily scrape cron (same-day reconcile is
   sufficient), heavy UI styling, MCP servers (optional bonus), and multi-hotel support.
-- Built in its own repository (not a fork of the brief), per the challenge rules.
 ```
