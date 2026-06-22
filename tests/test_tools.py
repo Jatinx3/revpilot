@@ -1,9 +1,4 @@
 """Tool-layer property tests, run against the loaded Supabase DB.
-
-The dataset carries last-year (2025) actuals plus forward-looking 2026 business,
-so the 2025 months exist. Provisional rows only appear in 2026 months, and the
-dataset regenerates daily from a moving anchor, so the provisional tests discover
-a month that currently holds provisional rows rather than hardcoding one.
 """
 
 import inspect
