@@ -160,9 +160,9 @@ def _runtime_context() -> str:
 def _resolve_model(model_id: str):
     """Map a MODEL_ID string to a model usable by create_deep_agent.
 
-    Supports an `openrouter:<model>` scheme (OpenAI-compatible gateway); other
-    provider-prefixed ids (e.g. `google_genai:...`, `openai:...`, `azure_openai:...`)
-    pass through for the framework's init_chat_model to resolve.
+    `openrouter:<model>` uses the OpenAI-compatible OpenRouter gateway. Any other
+    provider-prefixed id (e.g. `google_genai:...`, `openai:...`) passes through to the
+    framework's init_chat_model to resolve.
     """
     if model_id.startswith("openrouter:"):
         from langchain_openai import ChatOpenAI
@@ -171,24 +171,6 @@ def _resolve_model(model_id: str):
             model=model_id.split(":", 1)[1],
             base_url="https://openrouter.ai/api/v1",
             api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            temperature=0,
-        )
-    if model_id.startswith("xai:"):
-        from langchain_openai import ChatOpenAI
-
-        return ChatOpenAI(
-            model=model_id.split(":", 1)[1],
-            base_url="https://api.x.ai/v1",
-            api_key=os.environ.get("XAI_API_KEY", ""),
-            temperature=0,
-        )
-    if model_id.startswith("azure_openai:"):
-        from langchain_openai import AzureChatOpenAI
-
-        # Reads AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT from the environment.
-        return AzureChatOpenAI(
-            azure_deployment=model_id.split(":", 1)[1],
-            api_version=os.environ.get("OPENAI_API_VERSION", "2024-10-21"),
             temperature=0,
         )
     return model_id

@@ -85,7 +85,7 @@ cp .env.example .env                 # then fill in the values
 | Key | Purpose |
 |---|---|
 | `DATABASE_URL` | Supabase Postgres (session-pooler URI) |
-| `MODEL_ID` | dev: `openrouter:google/gemini-2.5-flash`; deployed: `openrouter:google/gemini-2.5-pro` (also `azure_openai:`, `xai:`, `google_genai:`) |
+| `MODEL_ID` | dev: `openrouter:google/gemini-2.5-flash`; deployed: `openrouter:google/gemini-2.5-pro` (also `google_genai:`, `openai:`) |
 | `OPENROUTER_API_KEY` | model gateway key |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Supabase project API URL + anon key (Project Settings → API); used for sign-in |
 
