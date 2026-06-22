@@ -27,8 +27,17 @@ def test_grain_inequality():
 
 # excluding cancelled changes the counts
 def test_cancellation_filter_changes_counts():
-    inc = get_otb_summary("2025-08", exclude_cancelled=False)
-    exc = get_otb_summary("2025-08", exclude_cancelled=True)
+    # Dataset regenerates daily, so find a month that currently has cancelled
+    # Posted rows rather than hardcoding one.
+    months = query(
+        "select to_char(stay_date,'YYYY-MM') m from reservations_hackathon "
+        "where reservation_status = 'Cancelled' and financial_status = 'Posted' "
+        "group by 1 order by count(*) desc limit 1"
+    )
+    assert months, "no cancelled Posted rows in dataset (broken ETL)"
+    month = months[0]["m"]
+    inc = get_otb_summary(month, exclude_cancelled=False)
+    exc = get_otb_summary(month, exclude_cancelled=True)
     assert exc["row_count"] < inc["row_count"]
     assert exc["reservation_count"] <= inc["reservation_count"]
 
